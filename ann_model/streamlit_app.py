@@ -8,7 +8,7 @@ import os
 import librosa
 
 # Import from our utility module
-from model_utils import NeuralNetwork, extract_features, read_wav, load_model_from_json
+from model_utils_ann import NeuralNetwork, extract_features, read_wav, load_model_from_json
 
 # Set page configuration
 st.set_page_config(
@@ -68,20 +68,30 @@ def main():
         
         try:
             with st.spinner("Processing audio and extracting features..."):
-                # Use your exact feature extraction
-                features = extract_features(tmp_file_path)
-                features_array = np.array(features).reshape(1, -1)
-                
-                # Normalize features
-                mean, std = norm_params
-                features_normalized = (features_array - mean) / std
-                
-                # Make prediction
-                predictions = model.predict_proba(features_normalized)
-                predicted_class_idx = model.predict(features_normalized)[0]
-                confidence = predictions[0][predicted_class_idx]
-                predicted_class = int_to_label[predicted_class_idx]
-            
+                try:
+                    # Use robust feature extraction
+                    features = extract_features(tmp_file_path)
+                    features_array = np.array(features).reshape(1, -1)
+                    
+                    # Check if we got the expected number of features (16: ZCR + Energy + DomFreq + 13 MFCCs)
+                    if len(features) != 16:
+                        st.warning(f"Expected 16 features, got {len(features)}. Results may be inaccurate.")
+                    
+                    # Normalize features
+                    mean, std = norm_params
+                    features_normalized = (features_array - mean) / std
+                    
+                    # Make prediction
+                    predictions = model.predict_proba(features_normalized)
+                    predicted_class_idx = model.predict(features_normalized)[0]
+                    confidence = predictions[0][predicted_class_idx]
+                    predicted_class = int_to_label[predicted_class_idx]
+                    
+                except Exception as feature_error:
+                    st.error(f"Feature extraction failed: {feature_error}")
+                    st.info("This might be due to an unsupported audio format or corrupted file.")
+                    return
+
             # Display results
             st.subheader("🎯 Classification Results")
             col1, col2 = st.columns(2)

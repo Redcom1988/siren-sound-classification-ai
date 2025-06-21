@@ -56,12 +56,47 @@ class NeuralNetwork:
 
 # Feature extraction functions from your notebook
 def read_wav(filename):
-    with wave.open(filename, 'rb') as wav_file:
-        n_channels, sampwidth, framerate, n_frames, _, _ = wav_file.getparams()
-        raw_data = wav_file.readframes(n_frames)
-        fmt = "<" + "h" * (n_frames * n_channels)
-        data = struct.unpack(fmt, raw_data)
-        return np.array(data), framerate
+    try:
+        with wave.open(filename, 'rb') as wav_file:
+            n_channels, sampwidth, framerate, n_frames, _, _ = wav_file.getparams()
+            
+            # Read all available frames
+            raw_data = wav_file.readframes(n_frames)
+            
+            # Calculate the actual number of samples based on channels and sample width
+            total_samples = len(raw_data) // (sampwidth * n_channels)
+            
+            # Use the original format but with correct sample count
+            if sampwidth == 2:  # 16-bit (most common)
+                fmt = "<" + "h" * (total_samples * n_channels)
+                data = struct.unpack(fmt, raw_data)
+                data = np.array(data)
+                
+                # If stereo, take only first channel
+                if n_channels == 2:
+                    data = data[::2]  # Take every other sample (left channel)
+            else:
+                # For other bit depths, fall back to librosa
+                import librosa
+                data, framerate = librosa.load(filename, sr=None, mono=True)
+                # Convert to integer range to match original format
+                data = (data * 32767).astype(np.int16)
+            
+            print(f"📂 Reading File: {filename} (sample rate: {framerate} Hz, total frames: {len(data)})")
+            return data, framerate
+            
+    except Exception as e:
+        print(f"Error with custom WAV reader: {e}")
+        # Fallback to librosa but maintain original data format
+        try:
+            import librosa
+            data, sr = librosa.load(filename, sr=None, mono=True)
+            # Convert to match original integer format
+            data = (data * 32767).astype(np.int16)
+            print(f"📂 Reading File with librosa: {filename} (sample rate: {sr} Hz)")
+            return data, sr
+        except Exception as e2:
+            raise Exception(f"Could not read audio file: {e2}")
 
 def zero_crossing_rate(samples):
     signs = np.sign(samples)
@@ -161,6 +196,7 @@ def mfcc(samples, sample_rate, num_filters=26, num_coeffs=13):
     return mfccs.tolist()
 
 def extract_features(file_path):
+    print(f"\n📥 Extract Features from: {file_path}")
     samples, sample_rate = read_wav(file_path)
     
     zcr = zero_crossing_rate(samples)
