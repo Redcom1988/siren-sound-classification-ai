@@ -22,14 +22,23 @@ if 'model_loaded' not in st.session_state:
 def load_model():
     """Load the KNN model"""
     try:
-        json_path = 'siren_knn_model.json'
+        # Use absolute path relative to the script location
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        json_path = os.path.join(script_dir, 'siren_knn_model.json')
+        
+        # Debug: Print the paths
+        st.write(f"Script directory: {script_dir}")
+        st.write(f"Looking for model at: {json_path}")
+        st.write(f"Model file exists: {os.path.exists(json_path)}")
         
         if os.path.exists(json_path):
             st.session_state.model, st.session_state.label_map = load_knn_model_from_json(json_path)
             st.session_state.model_loaded = True
             return True, f"KNN model loaded successfully from {json_path}"
         else:
-            return False, "No KNN model file found. Please ensure 'siren_knn_model.json' exists in the current directory."
+            # List files in the directory for debugging
+            files_in_dir = os.listdir(script_dir)
+            return False, f"No KNN model file found at {json_path}. Files in directory: {files_in_dir}"
     
     except Exception as e:
         # Reset session state on error
