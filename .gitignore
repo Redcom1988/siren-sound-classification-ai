@@ -1,4 +1,8 @@
 /data/
 /other_data/
 /__pycache__
+/ann_model/__pycache__/
+/knn_model/__pycache__/
+/ann_model/deprecated/
+/knn_model/deprecated/
 kaggle.json
