@@ -6,3 +6,4 @@
 /ann_model/deprecated/
 /knn_model/deprecated/
 kaggle.json
+knn_model/knn_siren.py
